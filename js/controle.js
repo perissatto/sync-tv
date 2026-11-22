@@ -8,7 +8,7 @@
   if (!room || room.length < 6) room = U.newRoom();
   U.lsSet('synctv.ctlroom', room);
 
-  var link = null, state = null, tvs = {}, titles = {};
+  var link = null, state = null, tvs = {}, titles = {}, bridge = false;
   var dragging = false;
 
   connect();
@@ -27,18 +27,20 @@
 
   function connect() {
     if (link) link.end();
-    state = null; tvs = {};
+    state = null; tvs = {}; bridge = false;
     $('roomBtn').textContent = U.fmtRoom(room);
     link = new U.Link({
       room: room,
-      subs: ['state', 'p/+'],
+      subs: ['state', 'p/+', 'bridge/status', 'bridge/pair/ok'],
       onStatus: function (s) { $('dot').className = 'dot' + (s === 'online' ? ' on' : ''); },
       onMessage: function (rel, d) {
         if (rel === 'state') { if (d && typeof d.seq === 'number') state = d; render(); }
         else if (rel.indexOf('p/') === 0) {
           var id = rel.slice(2);
           if (d.gone) delete tvs[id]; else tvs[id] = { d: d, seen: U.now() };
-        } else if (rel.indexOf('pair/') === 0 && /\/ok$/.test(rel)) pairOk();
+        } else if (rel === 'bridge/status') bridge = !!d.online;
+        else if (rel === 'bridge/pair/ok') { if (pairCode && d.code === pairCode) { if (d.ok) pairOk(); else { stopPair(); $('pairMsg').textContent = d.error || 'Não foi possível parear.'; } } }
+        else if (rel.indexOf('pair/') === 0 && /\/ok$/.test(rel)) pairOk();
       }
     });
   }
@@ -140,15 +142,20 @@
     // TVs
     var box = $('tvs');
     if (!list.length) {
-      if (!box.querySelector('.empty')) box.innerHTML = '<div class="empty">Nenhuma TV conectada. Abra <b>' + esc(tvUrl.replace(/^https?:\/\//, '')) + '</b> no navegador da TV.</div>';
+      var msg = bridge ? 'Ponte ativa. Toque em <b>+ Adicionar TV</b> e use o código do app do YouTube (Configurações → Vincular com código de TV).'
+        : 'Nenhuma TV conectada. Abra <b>' + esc(tvUrl.replace(/^https?:\/\//, '')) + '</b> no navegador da TV.';
+      if (box.getAttribute('data-msg') !== msg) { box.innerHTML = '<div class="empty">' + msg + '</div>'; box.setAttribute('data-msg', msg); }
     } else {
+      box.removeAttribute('data-msg');
       box.innerHTML = list.map(function (x) {
         var d = x.d, badges = '', info;
         if (d.leader) badges += '<span class="badge lead">principal</span>';
-        if (!d.act) badges += '<span class="badge warn">aperte OK na TV</span>';
+        if (!d.act && d.kind !== 'app') badges += '<span class="badge warn">aperte OK na TV</span>';
+        if (d.kind === 'app') badges += '<span class="badge">app YouTube</span>';
         if (d.err) badges += '<span class="badge warn">' + esc(d.err) + '</span>';
         if (d.leader) info = 'referência de tempo';
         else if (!d.synced) info = 'sincronizando relógio…';
+        else if (d.kind === 'app') info = 'diferença ' + fmtMs(d.drift);
         else info = 'diferença ' + fmtMs(d.drift) + ' · rede ' + d.rtt + ' ms';
         return '<div class="tv"><div><div class="n">' + esc(d.name || d.id) + badges + '</div><div class="m">' + info + '</div></div>' +
           '<div class="b"><button class="small" data-tv="' + esc(d.id) + '">⋯</button></div></div>';
@@ -186,8 +193,9 @@
   $('pairCancel').onclick = function () { stopPair(); $('pairDlg').close(); };
   $('pairGo').onclick = function () {
     var code = $('pairCode').value.replace(/\D/g, '');
-    if (code.length !== 6) { $('pairMsg').textContent = 'O código tem 6 dígitos.'; return; }
     var name = $('pairName').value.trim() || ('TV ' + (Object.keys(tvs).length + 1));
+    if (code.length === 12) return pairApp(code, name);
+    if (code.length !== 6) { $('pairMsg').textContent = 'Use o código de 6 dígitos da página Sync TV ou o de 12 dígitos do app do YouTube.'; return; }
     stopPair();
     pairCode = code;
     link.sub('/pair/' + code + '/ok');
@@ -199,13 +207,21 @@
     send(); pairTimer = setInterval(send, 1000);
     $('pairMsg').textContent = 'Enviando para a TV…';
   };
+  function pairApp(code, name) {
+    if (!bridge) { $('pairMsg').textContent = 'A ponte não está rodando. Inicie o ponte.py no computador e tente de novo.'; return; }
+    stopPair();
+    pairCode = code;
+    link.pub('bridge/pair', { code: code, name: name });
+    $('pairMsg').textContent = 'Pareando com o app do YouTube…';
+    pairTimer = setTimeout(function () { stopPair(); $('pairMsg').textContent = 'A ponte não respondeu. Veja se ela está rodando.'; }, 20000);
+  }
   function pairOk() {
     stopPair();
     $('pairDlg').close();
-    toast('TV pareada! Agora aperte OK no controle da TV.');
+    toast('TV pareada!');
   }
   function stopPair() {
-    clearInterval(pairTimer); pairTimer = null;
+    clearInterval(pairTimer); clearTimeout(pairTimer); pairTimer = null;
     if (pairCode) { try { link.unsub('/pair/' + pairCode + '/ok'); } catch (e) {} pairCode = null; }
   }
 

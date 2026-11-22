@@ -97,7 +97,7 @@
     if (rel === 'cmd') { if (isLeader) handleCmd(d); return; }
     if (rel.indexOf('p/') === 0) {
       var id = rel.slice(2);
-      if (id === ME) return;
+      if (id === ME || d.kind === 'app') return; // TVs do app oficial são da ponte
       if (d.gone) delete peers[id]; else peers[id] = { d: d, seen: U.now() };
       return;
     }

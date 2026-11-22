@@ -116,9 +116,9 @@
 
 <dialog id="pairDlg">
   <h3>Adicionar TV</h3>
-  <div class="hint" style="margin-top:0">Na TV, abra <b class="tvUrl2"></b>. Ela mostra um código de 6 dígitos.</div>
+  <div class="hint" style="margin-top:0"><b>App do YouTube:</b> na TV, abra o YouTube → Configurações → <i>Vincular com código de TV</i> (12 dígitos). Requer a ponte rodando.<br><b>Navegador:</b> abra <b class="tvUrl2"></b> (6 dígitos).</div>
   <label for="pairCode">Código mostrado na TV</label>
-  <input id="pairCode" class="code" inputmode="numeric" maxlength="7" placeholder="000 000" autocomplete="off">
+  <input id="pairCode" class="code" inputmode="numeric" maxlength="18" placeholder="código" autocomplete="off">
   <label for="pairName">Nome da TV</label>
   <input id="pairName" placeholder="Ex.: Sala, Varanda" maxlength="30" autocomplete="off">
   <div class="row"><button id="pairCancel">Cancelar</button><button class="primary" id="pairGo">Parear</button></div>

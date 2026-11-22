@@ -1,0 +1,17 @@
+# Para rodar sempre no Raspberry Pi/Linux:
+#   sudo cp sync-tv-ponte.service /etc/systemd/system/ && sudo systemctl enable --now sync-tv-ponte
+# Ajuste User e WorkingDirectory para onde você copiou a pasta "ponte".
+[Unit]
+Description=Ponte Sync TV (app do YouTube)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/sync-tv/ponte
+ExecStart=/home/pi/sync-tv/ponte/.venv/bin/python ponte.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
