@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Sync TV — TV</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; color: #f2f2f2; font-family: "LG Smart UI", Roboto, Arial, sans-serif; overflow: hidden; }
+  [hidden] { display: none !important; }
+  #player, #player iframe { position: fixed; inset: 0; top: 0; left: 0; width: 100vw; height: 100vh; border: 0; }
+  body.idle #player { visibility: hidden; }
+  .screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; }
+  .card { display: flex; gap: 5vw; align-items: center; padding: 4vw; }
+  .qr { width: 22vw; background: #fff; border-radius: 1vw; padding: 0.6vw; }
+  .qr svg { display: block; width: 100%; height: auto; }
+  h1 { font-size: 2.6vw; font-weight: 500; margin: 0 0 1vw; color: #bbb; }
+  .big { font-size: 7vw; font-weight: 700; letter-spacing: .4vw; margin: 0 0 1.5vw; color: #fff; }
+  p { font-size: 1.7vw; margin: .6vw 0; color: #bbb; max-width: 48vw; line-height: 1.4; }
+  .url { color: #ff5a5a; font-weight: 600; }
+  .muted { color: #777; font-size: 1.4vw; }
+  #idle { display: none; background: radial-gradient(circle at 30% 20%, #2a0a0a, #000 70%); }
+  body.idle #idle { display: flex; }
+  #activate { background: rgba(0,0,0,.88); z-index: 10; flex-direction: column; text-align: center; }
+  #activate p { max-width: 60vw; }
+  button, input, select { font: inherit; font-size: 2vw; border-radius: .8vw; border: .2vw solid #444; background: #1b1b1b; color: #fff; padding: 1vw 2vw; }
+  button:focus, input:focus { outline: none; border-color: #ff3b3b; box-shadow: 0 0 0 .4vw rgba(255,59,59,.45); }
+  #activateBtn { font-size: 3vw; padding: 1.6vw 4vw; background: #e62117; border-color: #e62117; margin-top: 2vw; }
+  #manualForm { margin-top: 2vw; display: flex; gap: 1vw; flex-wrap: wrap; }
+  #manualForm input { width: 16vw; }
+  #hud { position: fixed; right: 1.5vw; bottom: 1.2vw; font-size: 1.2vw; color: #ccc; background: rgba(0,0,0,.55); padding: .5vw 1vw; border-radius: .6vw; opacity: 0; transition: opacity .4s; z-index: 5; }
+  body.idle #hud, body.showhud #hud { opacity: 1; }
+  #toast { position: fixed; left: 50%; top: 3vw; transform: translateX(-50%); background: #b3261e; color: #fff; font-size: 1.8vw; padding: 1vw 2vw; border-radius: .8vw; z-index: 20; }
+  #resetBtn { font-size: 1.3vw; padding: .5vw 1.2vw; margin-top: 1.5vw; background: transparent; color: #888; }
+</style>
+</head>
+<body class="idle">
+
+<!-- TV ainda não pareada -->
+<section id="pair" class="screen" hidden>
+  <div class="card">
+    <div class="qr" id="pairQr"></div>
+    <div>
+      <h1>Sync TV · parear esta TV</h1>
+      <div class="big" id="pairCode">--- ---</div>
+      <p>No celular, abra <span class="url" id="pairUrl"></span> (ou aponte a câmera para o QR) e toque em <b>Adicionar TV</b> com este código.</p>
+      <p class="muted" id="pairStatus">Conectando…</p>
+      <form id="manualForm">
+        <input id="manualRoom" placeholder="ou código da sala" autocomplete="off">
+        <input id="manualName" placeholder="nome da TV" autocomplete="off">
+        <button type="submit">Entrar</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- TV pareada -->
+<section id="main" hidden>
+  <div id="player"></div>
+
+  <div id="idle" class="screen">
+    <div class="card">
+      <div class="qr" id="ctlQr"></div>
+      <div>
+        <h1 id="tvName">TV</h1>
+        <div class="big" id="roomCode"></div>
+        <p>Controle pelo celular: <span class="url" id="ctlUrl"></span></p>
+        <p class="muted" id="idleRole"></p>
+        <button id="resetBtn">Desvincular esta TV</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="activate" class="screen" hidden>
+    <h1>Sync TV</h1>
+    <p>O navegador da TV só libera vídeo com som depois de um clique.</p>
+    <button id="activateBtn">▶ Pressione OK para ativar</button>
+    <p class="muted">Dica: entre em youtube.com neste navegador com sua conta Premium para assistir sem anúncios.</p>
+  </div>
+
+  <div id="hud">conectando…</div>
+</section>
+
+<div id="toast" hidden></div>
+
+<script src="../vendor/mqtt.min.js"></script>
+<script src="../vendor/qrcode.js"></script>
+<script src="../js/common.js"></script>
+<script src="../js/tv.js"></script>
+</body>
+</html>
